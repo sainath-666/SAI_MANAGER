@@ -1,0 +1,47 @@
+const List<Map<String, dynamic>> mockTasksJson = [
+  {
+    'id': 'task-1',
+    'title': 'Design Dashboard Wireframes',
+    'description': 'Create high-fidelity UX mockups for the Personal Life Manager layout.',
+    'dueDate': '2026-06-02T12:00:00Z',
+    'category': 'Freelance',
+    'priority': 'High',
+    'isCompleted': true,
+  },
+  {
+    'id': 'task-2',
+    'title': 'Refactor App Navigation Routing',
+    'description': 'Transition ShellRoute elements in GoRouter to use IndexedStack structures.',
+    'dueDate': '2026-06-05T18:00:00Z',
+    'category': 'Office Work',
+    'priority': 'Medium',
+    'isCompleted': false,
+  },
+  {
+    'id': 'task-3',
+    'title': 'Compile Finance Receipts',
+    'description': 'Gather monthly invoices and PDF receipts for tax preparation reporting.',
+    'dueDate': '2026-06-15T09:00:00Z',
+    'category': 'Finance',
+    'priority': 'High',
+    'isCompleted': false,
+  },
+  {
+    'id': 'task-4',
+    'title': '30-Minute Gym Workout Session',
+    'description': 'Strength training and dynamic stretching for physical conditioning.',
+    'dueDate': '2026-05-31T20:00:00Z',
+    'category': 'Goals',
+    'priority': 'Low',
+    'isCompleted': true,
+  },
+  {
+    'id': 'task-5',
+    'title': 'Complete Clean Architecture Study',
+    'description': 'Review dependency rules, core entities, and boundary interfaces.',
+    'dueDate': '2026-06-03T22:00:00Z',
+    'category': 'Learning',
+    'priority': 'Low',
+    'isCompleted': false,
+  }
+];
