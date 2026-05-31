@@ -22,16 +22,28 @@ class ProjectModel {
   });
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
+    final dueDateValue = json['dueDate'] ?? json['due_date'];
+    final tasksCountValue = json['tasksCount'] ?? json['tasks_count'] ?? 0;
+    final completedTasksCountValue =
+        json['completedTasksCount'] ?? json['completed_tasks_count'] ?? 0;
+    final progressValue = json['progress'] != null
+        ? (json['progress'] as num).toDouble()
+        : (tasksCountValue > 0
+              ? completedTasksCountValue / tasksCountValue
+              : 0.0);
+
     return ProjectModel(
       id: json['id'] as String,
       name: json['name'] as String,
       description: json['description'] as String,
-      category: json['category'] as String,
-      progress: (json['progress'] as num).toDouble(),
+      category: json['category'] as String? ?? 'General',
+      progress: progressValue,
       status: json['status'] as String,
-      tasksCount: json['tasksCount'] as int,
-      completedTasksCount: json['completedTasksCount'] as int,
-      dueDate: DateTime.parse(json['dueDate'] as String),
+      tasksCount: tasksCountValue as int,
+      completedTasksCount: completedTasksCountValue as int,
+      dueDate: dueDateValue != null
+          ? DateTime.parse(dueDateValue as String)
+          : DateTime.now().add(const Duration(days: 7)),
     );
   }
 
