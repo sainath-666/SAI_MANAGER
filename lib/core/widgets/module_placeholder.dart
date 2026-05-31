@@ -44,18 +44,19 @@ class ModulePlaceholder extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            description,
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
+          Text(description, style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 24),
-          if (content != null) content!,
+          ?content,
           if (content == null)
             GlassCard(
               padding: const EdgeInsets.all(40),
               child: Column(
                 children: [
-                  Icon(icon, size: 64, color: AppColors.secondary.withOpacity(0.4)),
+                  Icon(
+                    icon,
+                    size: 64,
+                    color: AppColors.secondary.withOpacity(0.4),
+                  ),
                   const SizedBox(height: 20),
                   Text(
                     '$title Module Active',
@@ -67,9 +68,9 @@ class ModulePlaceholder extends StatelessWidget {
                   Text(
                     'This workspace is currently running in Phase 1 (Local Static Mode). All presentation controllers, state providers, and abstract repository patterns are bound. Swap in a REST API or Supabase client configuration in Phase 2 & 3.',
                     textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      height: 1.5,
-                    ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(height: 1.5),
                   ),
                   const SizedBox(height: 32),
                   Wrap(
@@ -79,7 +80,11 @@ class ModulePlaceholder extends StatelessWidget {
                     children: [
                       _buildBadge(context, 'MOCK ACTIVE', AppColors.primary),
                       _buildBadge(context, 'API READY', AppColors.secondary),
-                      _buildBadge(context, 'SUPABASE COMPATIBLE', AppColors.accent),
+                      _buildBadge(
+                        context,
+                        'SUPABASE COMPATIBLE',
+                        AppColors.accent,
+                      ),
                     ],
                   ),
                 ],

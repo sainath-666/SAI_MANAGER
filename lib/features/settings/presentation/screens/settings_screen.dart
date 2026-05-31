@@ -22,13 +22,17 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Icon(LucideIcons.settings, color: AppColors.primary, size: 28),
+                const Icon(
+                  LucideIcons.settings,
+                  color: AppColors.primary,
+                  size: 28,
+                ),
                 const SizedBox(width: 12),
                 Text(
                   'Settings',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -40,33 +44,38 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             Text(
               'Appearance',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             GlassCard(
               child: SwitchListTile(
                 title: const Text('Dark Theme Mode'),
-                subtitle: const Text('Toggle between dark-slate and light-slate interfaces.'),
+                subtitle: const Text(
+                  'Toggle between dark-slate and light-slate interfaces.',
+                ),
                 secondary: Icon(
-                  themeMode == ThemeMode.dark ? LucideIcons.moon : LucideIcons.sun,
+                  themeMode == ThemeMode.dark
+                      ? LucideIcons.moon
+                      : LucideIcons.sun,
                   color: AppColors.primary,
                 ),
                 value: themeMode == ThemeMode.dark,
                 onChanged: (val) {
-                  ref.read(themeModeProvider.notifier).state =
-                      val ? ThemeMode.dark : ThemeMode.light;
+                  ref.read(themeModeProvider.notifier).state = val
+                      ? ThemeMode.dark
+                      : ThemeMode.light;
                 },
-                activeColor: AppColors.primary,
+                activeThumbColor: AppColors.primary,
               ),
             ),
             const SizedBox(height: 24),
             Text(
               'System Diagnostics',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             GlassCard(
@@ -78,7 +87,10 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'In-Memory Cache Status',
                     trailing: const Text(
                       'Running (100% Mock)',
-                      style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const Divider(height: 24),
@@ -88,7 +100,10 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'Current Build Version',
                     trailing: const Text(
                       '1.0.0-phase1+demo',
-                      style: TextStyle(color: AppColors.secondary, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: AppColors.secondary,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const Divider(height: 24),
@@ -98,7 +113,10 @@ class SettingsScreen extends ConsumerWidget {
                     title: 'API Server Endpoint',
                     trailing: const Text(
                       'None (Backend-Ready)',
-                      style: TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -125,9 +143,9 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(width: 12),
             Text(
               title,
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500),
             ),
           ],
         ),
