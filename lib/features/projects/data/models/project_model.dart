@@ -35,12 +35,12 @@ class ProjectModel {
     return ProjectModel(
       id: json['id'] as String,
       name: json['name'] as String,
-      description: json['description'] as String,
+      description: json['description'] as String? ?? '',
       category: json['category'] as String? ?? 'General',
       progress: progressValue,
       status: json['status'] as String,
-      tasksCount: tasksCountValue as int,
-      completedTasksCount: completedTasksCountValue as int,
+      tasksCount: (tasksCountValue as num).toInt(),
+      completedTasksCount: (completedTasksCountValue as num).toInt(),
       dueDate: dueDateValue != null
           ? DateTime.parse(dueDateValue as String)
           : DateTime.now().add(const Duration(days: 7)),

@@ -8,7 +8,8 @@ import '../../../../core/widgets/glass_card.dart';
 import '../../../../core/widgets/responsive_builder.dart';
 import '../../../tasks/presentation/providers/task_providers.dart';
 import '../../../projects/presentation/providers/project_providers.dart';
-import '../../../../mock/finance_mock.dart';
+import '../../../finance/data/models/finance_summary.dart';
+import '../../../finance/presentation/providers/finance_providers.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -17,6 +18,7 @@ class DashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(tasksListProvider);
     final projectsAsync = ref.watch(projectsListProvider);
+    final financeAsync = ref.watch(financeSummaryProvider);
     final isDesktop = ResponsiveBuilder.isDesktop(context);
 
     return Scaffold(
@@ -35,7 +37,26 @@ class DashboardScreen extends ConsumerWidget {
                 data: (projects) {
                   final pendingTasks = tasks.where((t) => !t.isCompleted).length;
                   final activeProjects = projects.where((p) => p.status != 'Completed').length;
-                  return _buildStatsGrid(context, pendingTasks, activeProjects);
+                  return financeAsync.when(
+                    data: (finance) => _buildStatsGrid(
+                      context,
+                      pendingTasks,
+                      activeProjects,
+                      finance,
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (e, s) => _buildStatsGrid(
+                      context,
+                      pendingTasks,
+                      activeProjects,
+                      const FinanceSummary(
+                        totalBalance: 0,
+                        monthlyIncome: 0,
+                        monthlyExpenses: 0,
+                        weeklyData: [0, 0, 0, 0, 0, 0, 0],
+                      ),
+                    ),
+                  );
                 },
                 loading: () => const LinearProgressIndicator(),
                 error: (e, s) => const SizedBox(),
@@ -52,7 +73,7 @@ class DashboardScreen extends ConsumerWidget {
                 children: [
                   Expanded(
                     flex: 5,
-                    child: _buildFinanceChartCard(context),
+                    child: _buildFinanceChartCard(context, financeAsync),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -62,7 +83,7 @@ class DashboardScreen extends ConsumerWidget {
                 ],
               )
             else ...[
-              _buildFinanceChartCard(context),
+              _buildFinanceChartCard(context, financeAsync),
               const SizedBox(height: 16),
               _buildRecentTasksCard(context, ref),
             ],
@@ -78,51 +99,67 @@ class DashboardScreen extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context) {
     final formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(DateTime.now());
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome Back, Sai',
-              style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              formattedDate,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+    final statusBadge = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            'API Ready',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
           ),
-          child: Row(
+        ],
+      ),
+    );
+
+    return Wrap(
+      spacing: 16,
+      runSpacing: 12,
+      alignment: WrapAlignment.spaceBetween,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        SizedBox(
+          width: ResponsiveBuilder.isDesktop(context)
+              ? 420
+              : MediaQuery.sizeOf(context).width - 48,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 16),
-              const SizedBox(width: 6),
               Text(
-                'Phase 1 Local State Active',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
+                'Welcome Back, Sai',
+                style: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      fontWeight: FontWeight.w900,
                     ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                formattedDate,
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
             ],
           ),
         ),
+        statusBadge,
       ],
     );
   }
 
-  Widget _buildStatsGrid(BuildContext context, int pendingTasks, int activeProjects) {
+  Widget _buildStatsGrid(
+    BuildContext context,
+    int pendingTasks,
+    int activeProjects,
+    FinanceSummary finance,
+  ) {
     final isDesktop = ResponsiveBuilder.isDesktop(context);
     final isTablet = ResponsiveBuilder.isTablet(context);
     final count = isDesktop ? 4 : (isTablet ? 2 : 1);
@@ -142,8 +179,8 @@ class DashboardScreen extends ConsumerWidget {
           icon: LucideIcons.dollarSign,
           iconColor: AppColors.primary,
           title: 'Total Balance',
-          value: '\$${mockFinanceSummary['totalBalance']}',
-          subtitle: 'Updated locally',
+          value: '\$${finance.totalBalance.toStringAsFixed(0)}',
+          subtitle: 'Synced ledger',
         ),
         _buildStatCard(
           context,
@@ -166,7 +203,7 @@ class DashboardScreen extends ConsumerWidget {
           icon: LucideIcons.award,
           iconColor: AppColors.warning,
           title: 'Monthly Expenses',
-          value: '\$${mockFinanceSummary['monthlyExpenses']}',
+          value: '\$${finance.monthlyExpenses.toStringAsFixed(0)}',
           subtitle: 'Current ledger',
         ),
       ],
@@ -231,8 +268,12 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFinanceChartCard(BuildContext context) {
+  Widget _buildFinanceChartCard(
+    BuildContext context,
+    AsyncValue<FinanceSummary> financeAsync,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final weeklyData = financeAsync.valueOrNull?.weeklyData ?? const [0, 0, 0, 0, 0, 0, 0];
     return GlassCard(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -250,7 +291,7 @@ class DashboardScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Visualized expenses from local cashbook ledger.',
+            'Visualized expenses from cashbook ledger.',
             style: TextStyle(
               fontSize: 12,
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
@@ -294,15 +335,10 @@ class DashboardScreen extends ConsumerWidget {
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
                   LineChartBarData(
-                    spots: const [
-                      FlSpot(0, 0),
-                      FlSpot(1, 0),
-                      FlSpot(2, 0),
-                      FlSpot(3, 65),
-                      FlSpot(4, 350),
-                      FlSpot(5, 0),
-                      FlSpot(6, 50),
-                    ],
+                    spots: List.generate(
+                      weeklyData.length,
+                      (index) => FlSpot(index.toDouble(), weeklyData[index]),
+                    ),
                     isCurved: true,
                     barWidth: 3,
                     color: AppColors.primary,

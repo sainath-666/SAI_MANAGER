@@ -1,9 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/network/api_client.dart';
 import '../../data/models/project_model.dart';
+import '../../data/repositories/api_project_repository.dart';
 import '../../data/repositories/fake_project_repository.dart';
 import '../../domain/repositories/project_repository.dart';
 
 final projectRepositoryProvider = Provider<ProjectRepository>((ref) {
+  if (ApiClient.isConfigured) {
+    return ApiProjectRepository();
+  }
+
   return FakeProjectRepository();
 });
 

@@ -24,12 +24,12 @@ class TaskModel {
     return TaskModel(
       id: json['id'] as String,
       title: json['title'] as String,
-      description: json['description'] as String,
+      description: json['description'] as String? ?? '',
       dueDate: dueDateValue != null
           ? DateTime.parse(dueDateValue as String)
           : DateTime.now().add(const Duration(days: 1)),
       category: json['category'] as String? ?? 'General',
-      priority: json['priority'] as String,
+      priority: json['priority'] as String? ?? 'medium',
       isCompleted: json['isCompleted'] as bool? ?? statusValue == 'done',
     );
   }
