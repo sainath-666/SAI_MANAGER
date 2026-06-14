@@ -14,7 +14,7 @@ class ApiException implements Exception {
 class ApiClient {
   static const String baseUrl = String.fromEnvironment(
     'SAI_MANAGER_API_URL',
-    defaultValue: 'http://localhost:3000/api',
+    defaultValue: 'https://sai-manager-api.onrender.com/api',
   );
   static const String authToken = String.fromEnvironment(
     'SAI_MANAGER_AUTH_TOKEN',
