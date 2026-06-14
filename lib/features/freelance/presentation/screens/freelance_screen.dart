@@ -11,6 +11,8 @@ import '../../../tasks/presentation/providers/task_providers.dart';
 import '../../../tasks/data/models/task_model.dart';
 import '../../../projects/presentation/providers/project_providers.dart';
 import '../../../projects/data/models/project_model.dart';
+import '../../../finance/presentation/providers/finance_providers.dart';
+import '../../../finance/data/models/transaction_model.dart';
 
 class FreelanceScreen extends ConsumerWidget {
   const FreelanceScreen({super.key});
@@ -19,6 +21,7 @@ class FreelanceScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final tasksAsync = ref.watch(tasksListProvider);
     final projectsAsync = ref.watch(projectsListProvider);
+    final transactionsAsync = ref.watch(transactionsListProvider);
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -41,7 +44,11 @@ class FreelanceScreen extends ConsumerWidget {
                 data: (projects) {
                   final freelanceTasks = tasks.where((t) => t.category == 'Freelance').toList();
                   final freelanceProjects = projects.where((p) => p.category == 'Freelance').toList();
-                  return _buildWorkspaceContent(context, ref, freelanceTasks, freelanceProjects);
+                  final List<TransactionModel> allTx = transactionsAsync.valueOrNull ?? [];
+                  final freelanceIncome = allTx
+                      .where((tx) => tx.category == 'Freelance' && tx.type == 'income')
+                      .fold<double>(0.0, (sum, tx) => sum + tx.amount);
+                  return _buildWorkspaceContent(context, ref, freelanceTasks, freelanceProjects, freelanceIncome);
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, s) => Text('Error loading projects: $e'),
@@ -73,6 +80,7 @@ class FreelanceScreen extends ConsumerWidget {
     WidgetRef ref,
     List<TaskModel> tasks,
     List<ProjectModel> projects,
+    double freelanceIncome,
   ) {
     final isDesktop = ResponsiveBuilder.isDesktop(context);
     final activeProjects = projects.where((p) => p.status != 'Completed').length;
@@ -102,9 +110,9 @@ class FreelanceScreen extends ConsumerWidget {
                     style: TextStyle(fontSize: 12, color: AppColors.darkTextSecondary),
                   ),
                   const SizedBox(height: 2),
-                  const Text(
-                    '\$3,700.00',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                  Text(
+                    '\$${freelanceIncome.toStringAsFixed(2)}',
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 2),
                   Text(
