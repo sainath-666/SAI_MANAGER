@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../theme/color_palette.dart';
 import '../router/navigation_item.dart';
 import 'responsive_builder.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/settings/presentation/screens/settings_screen.dart';
 
 class NavigationShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -23,22 +26,34 @@ class NavigationShell extends StatelessWidget {
   }
 }
 
+String _getInitials(String? fullName, String? email) {
+  final name = fullName?.trim();
+  if (name != null && name.isNotEmpty) {
+    final parts = name.split(' ').where((p) => p.isNotEmpty).toList();
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return name.length >= 2 ? name.substring(0, 2).toUpperCase() : name.toUpperCase();
+  }
+  final e = email?.trim();
+  if (e != null && e.isNotEmpty) return e[0].toUpperCase();
+  return 'U';
+}
+
 // ==========================================
 // DESKTOP SHELL (Sidebar Panel)
 // ==========================================
-class _DesktopShell extends StatelessWidget {
+class _DesktopShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   const _DesktopShell({required this.navigationShell});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final activeIndex = navigationShell.currentIndex;
+    final profile = ref.watch(userProfileProvider).valueOrNull;
 
     return Scaffold(
       body: Row(
         children: [
-          // Left Sidebar Drawer
           Container(
             width: 260,
             decoration: BoxDecoration(
@@ -55,10 +70,8 @@ class _DesktopShell extends StatelessWidget {
             ),
             child: Column(
               children: [
-                // Sidebar Header / Brand
                 _buildHeader(context),
                 const Divider(),
-                // Navigation Items List
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -71,16 +84,12 @@ class _DesktopShell extends StatelessWidget {
                   ),
                 ),
                 const Divider(),
-                // User Profile footer card
-                _buildProfileFooter(context),
+                _buildProfileFooter(context, profile),
               ],
             ),
           ),
-          // Core Main Content Canvas
           Expanded(
-            child: Scaffold(
-              body: navigationShell,
-            ),
+            child: Scaffold(body: navigationShell),
           ),
         ],
       ),
@@ -170,8 +179,13 @@ class _DesktopShell extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileFooter(BuildContext context) {
+  Widget _buildProfileFooter(BuildContext context, Map<String, dynamic>? profile) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fullName = profile?['full_name'] as String?;
+    final email = profile?['email'] as String?;
+    final displayName = (fullName?.isNotEmpty == true) ? fullName! : (email ?? 'User');
+    final initials = _getInitials(fullName, email);
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -179,24 +193,24 @@ class _DesktopShell extends StatelessWidget {
           CircleAvatar(
             backgroundColor: AppColors.primary.withOpacity(0.2),
             foregroundColor: AppColors.primary,
-            child: const Text('SK', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(initials, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Sai Karthik',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                Text(
+                  displayName,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  'Personal Operating System',
+                  'Live API',
                   style: TextStyle(
                     fontSize: 11,
-                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    color: isDark ? AppColors.primary : AppColors.primary,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -210,15 +224,20 @@ class _DesktopShell extends StatelessWidget {
 // ==========================================
 // TABLET SHELL (Navigation Rail)
 // ==========================================
-class _TabletShell extends StatelessWidget {
+class _TabletShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
 
   const _TabletShell({required this.navigationShell});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final activeIndex = navigationShell.currentIndex;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final initials = _getInitials(
+      profile?['full_name'] as String?,
+      profile?['email'] as String?,
+    );
 
     return Scaffold(
       body: Row(
@@ -237,7 +256,9 @@ class _TabletShell extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 20,
                     backgroundColor: AppColors.secondary.withOpacity(0.2),
-                    child: const Text('SK', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    child: Text(initials,
+                        style: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ),
@@ -261,31 +282,25 @@ class _TabletShell extends StatelessWidget {
 // ==========================================
 // MOBILE SHELL (Bottom Bar + Drawer)
 // ==========================================
-class _MobileShell extends StatelessWidget {
+class _MobileShell extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
+
+  static const List<int> _mobileTabIndices = [0, 4, 5, 8, 12];
 
   const _MobileShell({required this.navigationShell});
 
-  // Helper mapping: map core 5 tabs to their respective indices in the 13 navigationItems
-  static const List<int> _mobileTabIndices = [
-    0,  // Dashboard
-    4,  // Tasks
-    5,  // Projects
-    8,  // Finance
-    12, // Settings
-  ];
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final activeIndex = navigationShell.currentIndex;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final themeMode = ref.watch(themeModeProvider);
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final displayName = (profile?['full_name'] as String?)?.isNotEmpty == true
+        ? profile!['full_name'] as String
+        : profile?['email'] as String? ?? 'User';
 
-    // Check if the current index is one of our primary bottom bar indexes
     int bottomBarSelectedIndex = _mobileTabIndices.indexOf(activeIndex);
-    // If not (e.g. user selected Office Work index 1 from drawer), we set it to -1, which is fine
-    if (bottomBarSelectedIndex == -1) {
-      bottomBarSelectedIndex = 0; // Default highlight to Dashboard
-    }
+    if (bottomBarSelectedIndex == -1) bottomBarSelectedIndex = 0;
 
     final activeItem = navigationItems[activeIndex];
 
@@ -295,10 +310,13 @@ class _MobileShell extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(
-              isDark ? LucideIcons.moon : LucideIcons.sun,
+              themeMode == ThemeMode.dark ? LucideIcons.moon : LucideIcons.sun,
               size: 20,
             ),
-            onPressed: () {},
+            onPressed: () {
+              ref.read(themeModeProvider.notifier).state =
+                  themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+            },
           ),
         ],
       ),
@@ -323,20 +341,22 @@ class _MobileShell extends StatelessWidget {
                       color: AppColors.primary.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(LucideIcons.terminal, color: AppColors.primary, size: 28),
+                    child: const Icon(LucideIcons.terminal,
+                        color: AppColors.primary, size: 28),
                   ),
                   const SizedBox(width: 14),
-                  const Column(
+                  Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'SAI_MANAGER',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
                       ),
                       Text(
-                        'Offline System',
-                        style: TextStyle(fontSize: 11, color: AppColors.primary),
+                        displayName,
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.primary),
                       ),
                     ],
                   ),
@@ -345,7 +365,8 @@ class _MobileShell extends StatelessWidget {
             ),
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 itemCount: navigationItems.length,
                 itemBuilder: (context, index) {
                   final item = navigationItems[index];
@@ -353,21 +374,26 @@ class _MobileShell extends StatelessWidget {
                   return ListTile(
                     leading: Icon(
                       item.icon,
-                      color: isSelected ? AppColors.primary : AppColors.darkTextSecondary,
+                      color: isSelected
+                          ? AppColors.primary
+                          : AppColors.darkTextSecondary,
                     ),
                     title: Text(
                       item.label,
                       style: TextStyle(
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         color: isSelected ? AppColors.primary : null,
                       ),
                     ),
                     selected: isSelected,
                     onTap: () {
-                      Navigator.pop(context); // Close Drawer
+                      Navigator.pop(context);
                       navigationShell.goBranch(index);
                     },
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   );
                 },
               ),

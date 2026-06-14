@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../widgets/navigation_shell.dart';
-
-// Import all module screens
+import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/office/presentation/screens/office_screen.dart';
 import '../../features/freelance/presentation/screens/freelance_screen.dart';
@@ -17,135 +18,106 @@ import '../../features/goals/presentation/screens/goals_screen.dart';
 import '../../features/learning/presentation/screens/learning_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 
-final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+final _rootNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
-final GoRouter appRouter = GoRouter(
-  navigatorKey: _rootNavigatorKey,
-  initialLocation: '/',
-  routes: [
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) {
-        return NavigationShell(navigationShell: navigationShell);
-      },
-      branches: [
-        // 0: Dashboard
-        StatefulShellBranch(
-          routes: [
+class _RouterNotifier extends ChangeNotifier {
+  _RouterNotifier(Ref ref) {
+    ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
+  }
+}
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final notifier = _RouterNotifier(ref);
+
+  final router = GoRouter(
+    navigatorKey: _rootNavigatorKey,
+    initialLocation: '/',
+    refreshListenable: notifier,
+    redirect: (context, state) {
+      final auth = ref.read(authProvider);
+      if (!auth.isInitialized) return null;
+
+      final loggedIn = auth.isAuthenticated;
+      final onLogin = state.matchedLocation == '/login';
+
+      if (!loggedIn && !onLogin) return '/login';
+      if (loggedIn && onLogin) return '/';
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/login',
+        builder: (context, state) => const LoginScreen(),
+      ),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return NavigationShell(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/', builder: (c, s) => const DashboardScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/office', builder: (c, s) => const OfficeScreen()),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(
-              path: '/',
-              builder: (context, state) => const DashboardScreen(),
-            ),
-          ],
-        ),
-        // 1: Office Work
-        StatefulShellBranch(
-          routes: [
+                path: '/freelance',
+                builder: (c, s) => const FreelanceScreen()),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(
-              path: '/office',
-              builder: (context, state) => const OfficeScreen(),
-            ),
-          ],
-        ),
-        // 2: Freelance
-        StatefulShellBranch(
-          routes: [
+                path: '/completed',
+                builder: (c, s) => const CompletedScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/tasks', builder: (c, s) => const TasksScreen()),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(
-              path: '/freelance',
-              builder: (context, state) => const FreelanceScreen(),
-            ),
-          ],
-        ),
-        // 3: Completed Work
-        StatefulShellBranch(
-          routes: [
+                path: '/projects',
+                builder: (c, s) => const ProjectsScreen()),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(
-              path: '/completed',
-              builder: (context, state) => const CompletedScreen(),
-            ),
-          ],
-        ),
-        // 4: Tasks
-        StatefulShellBranch(
-          routes: [
+                path: '/calendar',
+                builder: (c, s) => const CalendarScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/notes', builder: (c, s) => const NotesScreen()),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(
-              path: '/tasks',
-              builder: (context, state) => const TasksScreen(),
-            ),
-          ],
-        ),
-        // 5: Projects
-        StatefulShellBranch(
-          routes: [
+                path: '/finance',
+                builder: (c, s) => const FinanceScreen()),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(
-              path: '/projects',
-              builder: (context, state) => const ProjectsScreen(),
-            ),
-          ],
-        ),
-        // 6: Calendar
-        StatefulShellBranch(
-          routes: [
+                path: '/dev',
+                builder: (c, s) => const DevWorkspaceScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: '/goals', builder: (c, s) => const GoalsScreen()),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(
-              path: '/calendar',
-              builder: (context, state) => const CalendarScreen(),
-            ),
-          ],
-        ),
-        // 7: Notes
-        StatefulShellBranch(
-          routes: [
+                path: '/learning',
+                builder: (c, s) => const LearningScreen()),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(
-              path: '/notes',
-              builder: (context, state) => const NotesScreen(),
-            ),
-          ],
-        ),
-        // 8: Finance
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/finance',
-              builder: (context, state) => const FinanceScreen(),
-            ),
-          ],
-        ),
-        // 9: Developer Workspace
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/dev',
-              builder: (context, state) => const DevWorkspaceScreen(),
-            ),
-          ],
-        ),
-        // 10: Goals & Habits
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/goals',
-              builder: (context, state) => const GoalsScreen(),
-            ),
-          ],
-        ),
-        // 11: Learning & Career
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/learning',
-              builder: (context, state) => const LearningScreen(),
-            ),
-          ],
-        ),
-        // 12: Settings
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/settings',
-              builder: (context, state) => const SettingsScreen(),
-            ),
-          ],
-        ),
-      ],
-    ),
-  ],
-);
+                path: '/settings',
+                builder: (c, s) => const SettingsScreen()),
+          ]),
+        ],
+      ),
+    ],
+  );
+
+  ref.onDispose(() {
+    router.dispose();
+    notifier.dispose();
+  });
+
+  return router;
+});

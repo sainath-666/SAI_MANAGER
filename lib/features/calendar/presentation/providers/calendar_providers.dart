@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_client.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/calendar_event.dart';
 import '../../data/repositories/api_calendar_repository.dart';
 import '../../data/repositories/fake_calendar_repository.dart';
@@ -21,7 +21,8 @@ final calendarColors = [
 ];
 
 final calendarRepositoryProvider = Provider<CalendarRepository>((ref) {
-  if (ApiClient.isConfigured) {
+  final isAuth = ref.watch(isAuthenticatedProvider);
+  if (isAuth) {
     return ApiCalendarRepository();
   }
   return FakeCalendarRepository();

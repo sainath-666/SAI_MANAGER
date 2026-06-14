@@ -10,6 +10,7 @@ import '../../../tasks/presentation/providers/task_providers.dart';
 import '../../../projects/presentation/providers/project_providers.dart';
 import '../../../finance/data/models/finance_summary.dart';
 import '../../../finance/presentation/providers/finance_providers.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -19,6 +20,7 @@ class DashboardScreen extends ConsumerWidget {
     final tasksAsync = ref.watch(tasksListProvider);
     final projectsAsync = ref.watch(projectsListProvider);
     final financeAsync = ref.watch(financeSummaryProvider);
+    final profileAsync = ref.watch(userProfileProvider);
     final isDesktop = ResponsiveBuilder.isDesktop(context);
 
     final tasks = tasksAsync.valueOrNull;
@@ -69,7 +71,7 @@ class DashboardScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header
-            _buildHeader(context),
+            _buildHeader(context, profileAsync.valueOrNull),
             const SizedBox(height: 24),
 
             // Dynamic Stats Grid
@@ -107,8 +109,14 @@ class DashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, Map<String, dynamic>? profile) {
     final formattedDate = DateFormat('EEEE, MMMM d, yyyy').format(DateTime.now());
+    final fullName = profile?['full_name'] as String?;
+    final email = profile?['email'] as String?;
+    final displayName = fullName?.isNotEmpty == true
+        ? fullName!
+        : email?.split('@').first ?? 'User';
+
     final statusBadge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
@@ -122,7 +130,7 @@ class DashboardScreen extends ConsumerWidget {
           const Icon(LucideIcons.shieldCheck, color: AppColors.primary, size: 16),
           const SizedBox(width: 6),
           Text(
-            'API Ready',
+            'Live API',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.bold,
@@ -146,7 +154,7 @@ class DashboardScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Welcome Back, Sai',
+                'Welcome Back, $displayName',
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                       fontWeight: FontWeight.w900,
                     ),

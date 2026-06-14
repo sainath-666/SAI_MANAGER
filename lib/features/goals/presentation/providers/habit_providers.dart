@@ -1,12 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_client.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/habit_model.dart';
 import '../../data/repositories/api_habit_repository.dart';
 import '../../data/repositories/fake_habit_repository.dart';
 import '../../domain/repositories/habit_repository.dart';
 
 final habitRepositoryProvider = Provider<HabitRepository>((ref) {
-  if (ApiClient.isConfigured) {
+  final isAuth = ref.watch(isAuthenticatedProvider);
+  if (isAuth) {
     return ApiHabitRepository();
   }
   return FakeHabitRepository();

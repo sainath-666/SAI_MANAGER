@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_client.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/repositories/api_note_repository.dart';
 import '../../data/repositories/fake_note_repository.dart';
 import '../../domain/repositories/note_repository.dart';
@@ -52,7 +52,8 @@ class NoteModel {
 }
 
 final noteRepositoryProvider = Provider<NoteRepository>((ref) {
-  if (ApiClient.isConfigured) {
+  final isAuth = ref.watch(isAuthenticatedProvider);
+  if (isAuth) {
     return ApiNoteRepository();
   }
   return FakeNoteRepository();

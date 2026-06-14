@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import '../../../../core/theme/color_palette.dart';
 import '../../../../core/widgets/glass_card.dart';
@@ -174,8 +175,8 @@ class _ApiLoginCard extends ConsumerStatefulWidget {
 }
 
 class _ApiLoginCardState extends ConsumerState<_ApiLoginCard> {
-  final _emailController = TextEditingController(text: 'demo@sai-manager.com');
-  final _passwordController = TextEditingController(text: 'Password123!');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   @override
   void dispose() {
@@ -187,6 +188,8 @@ class _ApiLoginCardState extends ConsumerState<_ApiLoginCard> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final profile = ref.watch(userProfileProvider).valueOrNull;
+    final loggedInEmail = profile?['email'] as String? ?? 'Authenticated';
 
     return GlassCard(
       padding: const EdgeInsets.all(20),
@@ -197,7 +200,7 @@ class _ApiLoginCardState extends ConsumerState<_ApiLoginCard> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Live Backend Login Session',
+                'Account Session',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               Icon(
@@ -216,14 +219,14 @@ class _ApiLoginCardState extends ConsumerState<_ApiLoginCard> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(LucideIcons.checkCircle2, color: AppColors.secondary, size: 20),
-                  SizedBox(width: 10),
+                  const Icon(LucideIcons.checkCircle2, color: AppColors.secondary, size: 20),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Successfully authenticated! Live API repositories are now active.',
-                      style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+                      'Signed in as $loggedInEmail',
+                      style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
                     ),
                   ),
                 ],
@@ -233,14 +236,12 @@ class _ApiLoginCardState extends ConsumerState<_ApiLoginCard> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  ref.read(authProvider.notifier).logout();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Logged out of API session.')),
-                  );
+                onPressed: () async {
+                  await ref.read(authProvider.notifier).logout();
+                  if (context.mounted) context.go('/login');
                 },
                 icon: const Icon(LucideIcons.logOut, size: 16),
-                label: const Text('Clear Token (Logout)'),
+                label: const Text('Sign Out'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.error,
                   foregroundColor: Colors.white,

@@ -1,15 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/network/api_client.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models/task_model.dart';
 import '../../data/repositories/api_task_repository.dart';
 import '../../data/repositories/fake_task_repository.dart';
 import '../../domain/repositories/task_repository.dart';
 
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
-  if (ApiClient.isConfigured) {
+  final isAuth = ref.watch(isAuthenticatedProvider);
+  if (isAuth) {
     return ApiTaskRepository();
   }
-
   return FakeTaskRepository();
 });
 
