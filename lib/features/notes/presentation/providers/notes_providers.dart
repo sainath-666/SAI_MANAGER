@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../mock/notes_mock.dart';
+import '../../../../core/network/api_client.dart';
+import '../../data/repositories/api_note_repository.dart';
+import '../../data/repositories/fake_note_repository.dart';
+import '../../domain/repositories/note_repository.dart';
 
 class NoteModel {
   final String id;
@@ -48,33 +51,44 @@ class NoteModel {
   }
 }
 
-class NotesNotifier extends StateNotifier<List<NoteModel>> {
-  NotesNotifier() : super([]) {
-    _loadMockNotes();
+final noteRepositoryProvider = Provider<NoteRepository>((ref) {
+  if (ApiClient.isConfigured) {
+    return ApiNoteRepository();
+  }
+  return FakeNoteRepository();
+});
+
+class NotesNotifier extends AsyncNotifier<List<NoteModel>> {
+  @override
+  Future<List<NoteModel>> build() {
+    return ref.watch(noteRepositoryProvider).getNotes();
   }
 
-  void _loadMockNotes() {
-    state = mockNotesJson.map((json) => NoteModel.fromJson(json)).toList();
+  Future<void> addNote(NoteModel note) async {
+    state = await AsyncValue.guard(() async {
+      await ref.read(noteRepositoryProvider).createNote(note);
+      return ref.read(noteRepositoryProvider).getNotes();
+    });
   }
 
-  void addNote(NoteModel note) {
-    state = [note, ...state];
+  Future<void> togglePin(String id) async {
+    state = await AsyncValue.guard(() async {
+      final notes = state.value ?? [];
+      final note = notes.firstWhere((n) => n.id == id);
+      final updated = note.copyWith(isPinned: !note.isPinned);
+      await ref.read(noteRepositoryProvider).updateNote(updated);
+      return ref.read(noteRepositoryProvider).getNotes();
+    });
   }
 
-  void togglePin(String id) {
-    state = state.map((n) {
-      if (n.id == id) {
-        return n.copyWith(isPinned: !n.isPinned);
-      }
-      return n;
-    }).toList();
-  }
-
-  void deleteNote(String id) {
-    state = state.where((n) => n.id != id).toList();
+  Future<void> deleteNote(String id) async {
+    state = await AsyncValue.guard(() async {
+      await ref.read(noteRepositoryProvider).deleteNote(id);
+      return ref.read(noteRepositoryProvider).getNotes();
+    });
   }
 }
 
-final notesListProvider = StateNotifierProvider<NotesNotifier, List<NoteModel>>((ref) {
-  return NotesNotifier();
-});
+final notesListProvider = AsyncNotifierProvider<NotesNotifier, List<NoteModel>>(
+  NotesNotifier.new,
+);

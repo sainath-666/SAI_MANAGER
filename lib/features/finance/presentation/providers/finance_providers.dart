@@ -52,6 +52,24 @@ class TransactionsNotifier extends StateNotifier<AsyncValue<List<TransactionMode
 
   Future<void> addTransaction(TransactionModel tx) async {
     state = await AsyncValue.guard(() async {
+      if (ApiClient.isConfigured) {
+        final body = {
+          'title': tx.title,
+          'amount': tx.amount,
+          'type': tx.type,
+          'category': tx.category,
+          'date': tx.date.toIso8601String(),
+        };
+        final data = await ApiClient().post('/finance/transactions', body);
+        final newTx = TransactionModel.fromJson(data['transaction'] as Map<String, dynamic>);
+        
+        // Refresh summary
+        _ref.read(financeSummaryProvider.notifier).loadSummary();
+        
+        final currentList = state.value ?? [];
+        return [newTx, ...currentList];
+      }
+
       final currentList = state.value ?? [];
       final newList = [tx, ...currentList];
 
@@ -86,6 +104,16 @@ class TransactionsNotifier extends StateNotifier<AsyncValue<List<TransactionMode
 
   Future<void> deleteTransaction(String id) async {
     state = await AsyncValue.guard(() async {
+      if (ApiClient.isConfigured) {
+        await ApiClient().delete('/finance/transactions/$id');
+        
+        // Refresh summary
+        _ref.read(financeSummaryProvider.notifier).loadSummary();
+        
+        final currentList = state.value ?? [];
+        return currentList.where((element) => element.id != id).toList();
+      }
+
       final currentList = state.value ?? [];
       final txIndex = currentList.indexWhere((element) => element.id == id);
       if (txIndex == -1) return currentList;

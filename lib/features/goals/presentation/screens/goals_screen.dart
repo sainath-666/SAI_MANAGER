@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/theme/color_palette.dart';
 import '../../../../core/widgets/glass_card.dart';
@@ -9,6 +10,8 @@ import '../../../tasks/presentation/providers/task_providers.dart';
 import '../../../tasks/data/models/task_model.dart';
 import '../../../projects/presentation/providers/project_providers.dart';
 import '../../../projects/data/models/project_model.dart';
+import '../../data/models/habit_model.dart';
+import '../providers/habit_providers.dart';
 
 class GoalsScreen extends ConsumerStatefulWidget {
   const GoalsScreen({super.key});
@@ -18,18 +21,11 @@ class GoalsScreen extends ConsumerStatefulWidget {
 }
 
 class _GoalsScreenState extends ConsumerState<GoalsScreen> {
-  // Simple local habit list for premium interactive streaks
-  final List<Map<String, dynamic>> _habits = [
-    {'id': 'h-1', 'title': '30-Minute Gym Conditioning', 'streak': 12, 'done': true},
-    {'id': 'h-2', 'title': 'Drink 3L Water', 'streak': 8, 'done': false},
-    {'id': 'h-3', 'title': 'Write Code/API Review', 'streak': 25, 'done': true},
-    {'id': 'h-4', 'title': 'Read Technical Article', 'streak': 3, 'done': false},
-  ];
-
   @override
   Widget build(BuildContext context) {
     final tasksAsync = ref.watch(tasksListProvider);
     final projectsAsync = ref.watch(projectsListProvider);
+    final habitsAsync = ref.watch(habitsListProvider);
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -43,16 +39,20 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
 
             tasksAsync.when(
               data: (tasks) => projectsAsync.when(
-                data: (projects) {
-                  final goalTasks = tasks.where((t) => t.category == 'Goals').toList();
-                  final goalProjects = projects.where((p) => p.category == 'Goals').toList();
-                  return _buildGoalsContent(context, goalTasks, goalProjects);
-                },
+                data: (projects) => habitsAsync.when(
+                  data: (habits) {
+                    final goalTasks = tasks.where((t) => t.category == 'Goals').toList();
+                    final goalProjects = projects.where((p) => p.category == 'Goals').toList();
+                    return _buildGoalsContent(context, goalTasks, goalProjects, habits);
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (e, s) => Center(child: Text('Error loading habits: $e')),
+                ),
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, s) => Text('Error loading projects: $e'),
+                error: (e, s) => Center(child: Text('Error loading projects: $e')),
               ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, s) => Text('Error loading tasks: $e'),
+              error: (e, s) => Center(child: Text('Error loading tasks: $e')),
             ),
           ],
         ),
@@ -77,6 +77,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
     BuildContext context,
     List<TaskModel> tasks,
     List<ProjectModel> projects,
+    List<HabitModel> habits,
   ) {
     final isDesktop = ResponsiveBuilder.isDesktop(context);
 
@@ -136,13 +137,13 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(flex: 3, child: _buildHabitsCard(context)),
+              Expanded(flex: 3, child: _buildHabitsCard(context, habits)),
               const SizedBox(width: 24),
               Expanded(flex: 2, child: _buildGoalObjectives(context, tasks, projects)),
             ],
           )
         else ...[
-          _buildHabitsCard(context),
+          _buildHabitsCard(context, habits),
           const SizedBox(height: 24),
           _buildGoalObjectives(context, tasks, projects),
         ],
@@ -150,7 +151,7 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
     );
   }
 
-  Widget _buildHabitsCard(BuildContext context) {
+  Widget _buildHabitsCard(BuildContext context, List<HabitModel> habits) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GlassCard(
@@ -165,72 +166,94 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
                 'Daily Habits Streak Tracker',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
-              Icon(LucideIcons.flame, color: AppColors.warning, size: 20),
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(LucideIcons.plus, size: 18, color: AppColors.primary),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => _showAddHabitDialog(context),
+                    tooltip: 'Add Habit',
+                  ),
+                  const SizedBox(width: 12),
+                  const Icon(LucideIcons.flame, color: AppColors.warning, size: 20),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 16),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _habits.length,
-            itemBuilder: (context, index) {
-              final habit = _habits[index];
-              return Padding(
-                key: ValueKey(habit['id']),
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkBg.withOpacity(0.3) : AppColors.lightBg.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isDark ? AppColors.darkBorder.withOpacity(0.5) : AppColors.lightBorder.withOpacity(0.5),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Checkbox(
-                        value: habit['done'] as bool,
-                        activeColor: AppColors.primary,
-                        onChanged: (val) {
-                          setState(() {
-                            habit['done'] = val;
-                            if (val == true) {
-                              habit['streak'] = (habit['streak'] as int) + 1;
-                            } else {
-                              habit['streak'] = (habit['streak'] as int) - 1;
-                            }
-                          });
-                        },
+          if (habits.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32),
+              child: Center(
+                child: Text('No habits configured.', style: TextStyle(color: AppColors.darkTextMuted)),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: habits.length,
+              itemBuilder: (context, index) {
+                final habit = habits[index];
+                return Padding(
+                  key: ValueKey(habit.id),
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkBg.withOpacity(0.3) : AppColors.lightBg.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkBorder.withOpacity(0.5) : AppColors.lightBorder.withOpacity(0.5),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          habit['title'] as String,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            decoration: (habit['done'] as bool) ? TextDecoration.lineThrough : null,
-                            color: (habit['done'] as bool) ? AppColors.darkTextMuted : null,
+                    ),
+                    child: Row(
+                      children: [
+                        Checkbox(
+                          value: habit.done,
+                          activeColor: AppColors.primary,
+                          onChanged: (val) {
+                            ref.read(habitsListProvider.notifier).toggleHabitCompletion(habit);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            habit.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              decoration: habit.done ? TextDecoration.lineThrough : null,
+                              color: habit.done ? AppColors.darkTextMuted : null,
+                            ),
                           ),
                         ),
-                      ),
-                      Row(
-                        children: [
-                          const Icon(LucideIcons.flame, size: 16, color: AppColors.warning),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${habit['streak']} days',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.warning),
-                          ),
-                        ],
-                      ),
-                    ],
+                        Row(
+                          children: [
+                            const Icon(LucideIcons.flame, size: 16, color: AppColors.warning),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${habit.streak} days',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: AppColors.warning),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(LucideIcons.trash2, size: 14, color: AppColors.error),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                ref.read(habitsListProvider.notifier).deleteHabit(habit.id);
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -333,6 +356,50 @@ class _GoalsScreenState extends ConsumerState<GoalsScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  void _showAddHabitDialog(BuildContext context) {
+    final titleController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            'Track New Habit',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: TextField(
+            controller: titleController,
+            decoration: const InputDecoration(
+              labelText: 'Habit Title',
+              hintText: 'e.g. Read 15 mins daily',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (titleController.text.isNotEmpty) {
+                  final newHabit = HabitModel(
+                    id: const Uuid().v4(),
+                    title: titleController.text,
+                    streak: 0,
+                    done: false,
+                  );
+                  ref.read(habitsListProvider.notifier).addHabit(newHabit);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

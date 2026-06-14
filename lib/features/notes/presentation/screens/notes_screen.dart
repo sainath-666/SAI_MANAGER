@@ -22,22 +22,9 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final notes = ref.watch(notesListProvider);
+    final notesAsync = ref.watch(notesListProvider);
     final isDesktop = ResponsiveBuilder.isDesktop(context);
     final isTablet = ResponsiveBuilder.isTablet(context);
-
-    // Filter notes
-    final filteredNotes = notes.where((note) {
-      final matchesSearch = note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          note.content.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesCategory = _selectedCategory == 'All' || note.category == _selectedCategory;
-      return matchesSearch && matchesCategory;
-    }).toList();
-
-    // Split pinned vs unpinned
-    final pinned = filteredNotes.where((n) => n.isPinned).toList();
-    final unpinned = filteredNotes.where((n) => !n.isPinned).toList();
-
     final gridCount = isDesktop ? 3 : (isTablet ? 2 : 1);
 
     return Scaffold(
@@ -47,57 +34,80 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         icon: const Icon(LucideIcons.plus, size: 20),
         label: const Text('New Note', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            _buildHeader(context),
-            const SizedBox(height: 24),
+      body: notesAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(
+          child: Text(
+            'Error loading notes: $err',
+            style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+          ),
+        ),
+        data: (notes) {
+          // Filter notes
+          final filteredNotes = notes.where((note) {
+            final matchesSearch = note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                note.content.toLowerCase().contains(_searchQuery.toLowerCase());
+            final matchesCategory = _selectedCategory == 'All' || note.category == _selectedCategory;
+            return matchesSearch && matchesCategory;
+          }).toList();
 
-            // Search and Category filter row
-            _buildFilterRow(context),
-            const SizedBox(height: 24),
+          // Split pinned vs unpinned
+          final pinned = filteredNotes.where((n) => n.isPinned).toList();
+          final unpinned = filteredNotes.where((n) => !n.isPinned).toList();
 
-            if (pinned.isNotEmpty) ...[
-              const Row(
-                children: [
-                  Icon(LucideIcons.pin, size: 14, color: AppColors.primary),
-                  SizedBox(width: 6),
-                  Text(
-                    'PINNED',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 0.5),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _buildNotesGrid(context, pinned, gridCount),
-              const SizedBox(height: 24),
-            ],
-
-            const Row(
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(LucideIcons.stickyNote, size: 14, color: AppColors.secondary),
-                SizedBox(width: 6),
-                Text(
-                  'NOTES',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.secondary, letterSpacing: 0.5),
+                // Header
+                _buildHeader(context),
+                const SizedBox(height: 24),
+
+                // Search and Category filter row
+                _buildFilterRow(context),
+                const SizedBox(height: 24),
+
+                if (pinned.isNotEmpty) ...[
+                  const Row(
+                    children: [
+                      Icon(LucideIcons.pin, size: 14, color: AppColors.primary),
+                      SizedBox(width: 6),
+                      Text(
+                        'PINNED',
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.primary, letterSpacing: 0.5),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildNotesGrid(context, pinned, gridCount),
+                  const SizedBox(height: 24),
+                ],
+
+                const Row(
+                  children: [
+                    Icon(LucideIcons.stickyNote, size: 14, color: AppColors.secondary),
+                    SizedBox(width: 6),
+                    Text(
+                      'NOTES',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppColors.secondary, letterSpacing: 0.5),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 12),
+                if (unpinned.isEmpty && pinned.isEmpty)
+                  const GlassCard(
+                    padding: EdgeInsets.all(40),
+                    child: Center(
+                      child: Text('No notes found.', style: TextStyle(color: AppColors.darkTextMuted)),
+                    ),
+                  )
+                else
+                  _buildNotesGrid(context, unpinned, gridCount),
               ],
             ),
-            const SizedBox(height: 12),
-            if (unpinned.isEmpty && pinned.isEmpty)
-              const GlassCard(
-                padding: EdgeInsets.all(40),
-                child: Center(
-                  child: Text('No notes found.', style: TextStyle(color: AppColors.darkTextMuted)),
-                ),
-              )
-            else
-              _buildNotesGrid(context, unpinned, gridCount),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

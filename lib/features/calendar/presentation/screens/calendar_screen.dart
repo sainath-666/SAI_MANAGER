@@ -28,15 +28,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final events = ref.watch(calendarEventsProvider);
+    final eventsAsync = ref.watch(calendarEventsProvider);
     final tasksAsync = ref.watch(tasksListProvider);
     final tasks = tasksAsync.valueOrNull ?? [];
 
     final isDesktop = ResponsiveBuilder.isDesktop(context);
-
-    // Filter events and tasks for the selected day
-    final dayEvents = events.where((e) => _isSameDay(e.date, _selectedDate)).toList();
-    final dayTasks = tasks.where((t) => _isSameDay(t.dueDate, _selectedDate)).toList();
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -45,44 +41,59 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         icon: const Icon(LucideIcons.plus, size: 20),
         label: const Text('Add Event', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Calendar Toolbar Header
-            _buildToolbar(context),
-            const SizedBox(height: 24),
-
-            if (_viewType == CalendarViewType.month) ...[
-              if (isDesktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Calendar grid card takes more space on desktop
-                    Expanded(
-                      flex: 3,
-                      child: _buildMonthCalendarCard(context, events, tasks),
-                    ),
-                    const SizedBox(width: 24),
-                    // Selected Day Agenda Panel
-                    Expanded(
-                      flex: 2,
-                      child: _buildAgendaPanel(context, dayEvents, dayTasks),
-                    ),
-                  ],
-                )
-              else ...[
-                _buildMonthCalendarCard(context, events, tasks),
-                const SizedBox(height: 24),
-                _buildAgendaPanel(context, dayEvents, dayTasks),
-              ],
-            ] else ...[
-              // Schedule View
-              _buildScheduleView(context, events, tasks),
-            ],
-          ],
+      body: eventsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, stack) => Center(
+          child: Text(
+            'Error loading events: $err',
+            style: const TextStyle(color: AppColors.error, fontWeight: FontWeight.bold),
+          ),
         ),
+        data: (events) {
+          // Filter events and tasks for the selected day
+          final dayEvents = events.where((e) => _isSameDay(e.date, _selectedDate)).toList();
+          final dayTasks = tasks.where((t) => _isSameDay(t.dueDate, _selectedDate)).toList();
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Calendar Toolbar Header
+                _buildToolbar(context),
+                const SizedBox(height: 24),
+
+                if (_viewType == CalendarViewType.month) ...[
+                  if (isDesktop)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Calendar grid card takes more space on desktop
+                        Expanded(
+                          flex: 3,
+                          child: _buildMonthCalendarCard(context, events, tasks),
+                        ),
+                        const SizedBox(width: 24),
+                        // Selected Day Agenda Panel
+                        Expanded(
+                          flex: 2,
+                          child: _buildAgendaPanel(context, dayEvents, dayTasks),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    _buildMonthCalendarCard(context, events, tasks),
+                    const SizedBox(height: 24),
+                    _buildAgendaPanel(context, dayEvents, dayTasks),
+                  ],
+                ] else ...[
+                  // Schedule View
+                  _buildScheduleView(context, events, tasks),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
+import '../../../../core/network/api_client.dart';
 import '../../data/models/calendar_event.dart';
+import '../../data/repositories/api_calendar_repository.dart';
+import '../../data/repositories/fake_calendar_repository.dart';
+import '../../domain/repositories/calendar_repository.dart';
 
 // List of Google Calendar style preset colors
 final calendarColors = [
@@ -17,69 +20,34 @@ final calendarColors = [
   const Color(0xFF616161), // Graphite (Gray)
 ];
 
-class CalendarEventsNotifier extends StateNotifier<List<CalendarEvent>> {
-  CalendarEventsNotifier() : super([]) {
-    _loadMockEvents();
+final calendarRepositoryProvider = Provider<CalendarRepository>((ref) {
+  if (ApiClient.isConfigured) {
+    return ApiCalendarRepository();
+  }
+  return FakeCalendarRepository();
+});
+
+class CalendarEventsNotifier extends AsyncNotifier<List<CalendarEvent>> {
+  @override
+  Future<List<CalendarEvent>> build() {
+    return ref.watch(calendarRepositoryProvider).getEvents();
   }
 
-  void _loadMockEvents() {
-    final today = DateTime.now();
-    final tomorrow = today.add(const Duration(days: 1));
-    final yesterday = today.subtract(const Duration(days: 1));
-
-    state = [
-      CalendarEvent(
-        id: const Uuid().v4(),
-        title: 'Project Kickoff Meeting',
-        description: 'Review project specifications, deliverables, and assign tasks to stakeholders.',
-        date: today,
-        startTime: const TimeOfDay(hour: 10, minute: 0),
-        endTime: const TimeOfDay(hour: 11, minute: 30),
-        color: const Color(0xFF0B8043), // Basil (Green)
-        category: 'Office Work',
-      ),
-      CalendarEvent(
-        id: const Uuid().v4(),
-        title: 'Finance Review & Ledger Sync',
-        description: 'Sync income ledger with cashbook API and analyze expenses trends.',
-        date: today,
-        startTime: const TimeOfDay(hour: 14, minute: 0),
-        endTime: const TimeOfDay(hour: 15, minute: 0),
-        color: const Color(0xFFD50000), // Tomato (Red)
-        category: 'Finance',
-      ),
-      CalendarEvent(
-        id: const Uuid().v4(),
-        title: 'Client Demo & Feedback Session',
-        description: 'Demonstrate active prototypes of Personal Operating System app to the product owner.',
-        date: tomorrow,
-        startTime: const TimeOfDay(hour: 11, minute: 0),
-        endTime: const TimeOfDay(hour: 12, minute: 0),
-        color: const Color(0xFF039BE5), // Peacock (Blue)
-        category: 'Freelance',
-      ),
-      CalendarEvent(
-        id: const Uuid().v4(),
-        title: 'Clean Architecture Study Group',
-        description: 'Discuss entity isolation, interfaces, and boundary layers in Flutter.',
-        date: yesterday,
-        startTime: const TimeOfDay(hour: 17, minute: 0),
-        endTime: const TimeOfDay(hour: 18, minute: 30),
-        color: const Color(0xFF8E24AA), // Grape (Purple)
-        category: 'Learning',
-      ),
-    ];
+  Future<void> addEvent(CalendarEvent event) async {
+    state = await AsyncValue.guard(() async {
+      await ref.read(calendarRepositoryProvider).createEvent(event);
+      return ref.read(calendarRepositoryProvider).getEvents();
+    });
   }
 
-  void addEvent(CalendarEvent event) {
-    state = [...state, event];
-  }
-
-  void deleteEvent(String id) {
-    state = state.where((e) => e.id != id).toList();
+  Future<void> deleteEvent(String id) async {
+    state = await AsyncValue.guard(() async {
+      await ref.read(calendarRepositoryProvider).deleteEvent(id);
+      return ref.read(calendarRepositoryProvider).getEvents();
+    });
   }
 }
 
-final calendarEventsProvider = StateNotifierProvider<CalendarEventsNotifier, List<CalendarEvent>>((ref) {
-  return CalendarEventsNotifier();
-});
+final calendarEventsProvider = AsyncNotifierProvider<CalendarEventsNotifier, List<CalendarEvent>>(
+  CalendarEventsNotifier.new,
+);

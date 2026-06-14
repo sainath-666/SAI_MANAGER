@@ -16,9 +16,13 @@ class ApiClient {
     'SAI_MANAGER_API_URL',
     defaultValue: 'https://sai-manager-api.onrender.com/api',
   );
-  static const String authToken = String.fromEnvironment(
+  static const String _envToken = String.fromEnvironment(
     'SAI_MANAGER_AUTH_TOKEN',
   );
+
+  static String? _dynamicToken;
+  static set dynamicToken(String? token) => _dynamicToken = token;
+  static String get authToken => _dynamicToken ?? _envToken;
 
   static bool get isConfigured => authToken.isNotEmpty;
 
