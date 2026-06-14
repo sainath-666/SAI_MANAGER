@@ -20,7 +20,6 @@ class TasksNotifier extends AsyncNotifier<List<TaskModel>> {
   }
 
   Future<void> addTask(TaskModel task) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(taskRepositoryProvider).createTask(task);
       return ref.read(taskRepositoryProvider).getTasks();
@@ -28,7 +27,6 @@ class TasksNotifier extends AsyncNotifier<List<TaskModel>> {
   }
 
   Future<void> toggleTaskCompletion(TaskModel task) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final updated = task.copyWith(isCompleted: !task.isCompleted);
       await ref.read(taskRepositoryProvider).updateTask(updated);
@@ -37,7 +35,6 @@ class TasksNotifier extends AsyncNotifier<List<TaskModel>> {
   }
 
   Future<void> deleteTask(String id) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(taskRepositoryProvider).deleteTask(id);
       return ref.read(taskRepositoryProvider).getTasks();

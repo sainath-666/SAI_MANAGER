@@ -21,6 +21,47 @@ class DashboardScreen extends ConsumerWidget {
     final financeAsync = ref.watch(financeSummaryProvider);
     final isDesktop = ResponsiveBuilder.isDesktop(context);
 
+    final tasks = tasksAsync.valueOrNull;
+    final projects = projectsAsync.valueOrNull;
+    final finance = financeAsync.valueOrNull;
+
+    final Widget statsWidget;
+    if (tasks == null || projects == null) {
+      if (tasksAsync.isLoading || projectsAsync.isLoading) {
+        statsWidget = const LinearProgressIndicator();
+      } else {
+        statsWidget = const SizedBox();
+      }
+    } else {
+      final pendingTasks = tasks.where((t) => !t.isCompleted).length;
+      final activeProjects = projects.where((p) => p.status != 'Completed').length;
+      
+      if (finance == null) {
+        if (financeAsync.isLoading) {
+          statsWidget = const LinearProgressIndicator();
+        } else {
+          statsWidget = _buildStatsGrid(
+            context,
+            pendingTasks,
+            activeProjects,
+            const FinanceSummary(
+              totalBalance: 0,
+              monthlyIncome: 0,
+              monthlyExpenses: 0,
+              weeklyData: [0, 0, 0, 0, 0, 0, 0],
+            ),
+          );
+        }
+      } else {
+        statsWidget = _buildStatsGrid(
+          context,
+          pendingTasks,
+          activeProjects,
+          finance,
+        );
+      }
+    }
+
     return Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -32,38 +73,7 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 24),
 
             // Dynamic Stats Grid
-            tasksAsync.when(
-              data: (tasks) => projectsAsync.when(
-                data: (projects) {
-                  final pendingTasks = tasks.where((t) => !t.isCompleted).length;
-                  final activeProjects = projects.where((p) => p.status != 'Completed').length;
-                  return financeAsync.when(
-                    data: (finance) => _buildStatsGrid(
-                      context,
-                      pendingTasks,
-                      activeProjects,
-                      finance,
-                    ),
-                    loading: () => const LinearProgressIndicator(),
-                    error: (e, s) => _buildStatsGrid(
-                      context,
-                      pendingTasks,
-                      activeProjects,
-                      const FinanceSummary(
-                        totalBalance: 0,
-                        monthlyIncome: 0,
-                        monthlyExpenses: 0,
-                        weeklyData: [0, 0, 0, 0, 0, 0, 0],
-                      ),
-                    ),
-                  );
-                },
-                loading: () => const LinearProgressIndicator(),
-                error: (e, s) => const SizedBox(),
-              ),
-              loading: () => const LinearProgressIndicator(),
-              error: (e, s) => const SizedBox(),
-            ),
+            statsWidget,
             const SizedBox(height: 24),
 
             // Responsive Middle row (Charts & Task Summaries)
@@ -162,52 +172,97 @@ class DashboardScreen extends ConsumerWidget {
   ) {
     final isDesktop = ResponsiveBuilder.isDesktop(context);
     final isTablet = ResponsiveBuilder.isTablet(context);
-    final count = isDesktop ? 4 : (isTablet ? 2 : 1);
 
-    return GridView(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: count,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        mainAxisExtent: 110,
+    final card1 = SizedBox(
+      height: 110,
+      child: _buildStatCard(
+        context,
+        icon: LucideIcons.dollarSign,
+        iconColor: AppColors.primary,
+        title: 'Total Balance',
+        value: '\$${finance.totalBalance.toStringAsFixed(0)}',
+        subtitle: 'Synced ledger',
       ),
-      children: [
-        _buildStatCard(
-          context,
-          icon: LucideIcons.dollarSign,
-          iconColor: AppColors.primary,
-          title: 'Total Balance',
-          value: '\$${finance.totalBalance.toStringAsFixed(0)}',
-          subtitle: 'Synced ledger',
-        ),
-        _buildStatCard(
-          context,
-          icon: LucideIcons.listTodo,
-          iconColor: AppColors.secondary,
-          title: 'Pending Tasks',
-          value: pendingTasks.toString(),
-          subtitle: 'Active priorities',
-        ),
-        _buildStatCard(
-          context,
-          icon: LucideIcons.folderOpen,
-          iconColor: AppColors.accent,
-          title: 'Active Projects',
-          value: activeProjects.toString(),
-          subtitle: 'Milestones tracked',
-        ),
-        _buildStatCard(
-          context,
-          icon: LucideIcons.award,
-          iconColor: AppColors.warning,
-          title: 'Monthly Expenses',
-          value: '\$${finance.monthlyExpenses.toStringAsFixed(0)}',
-          subtitle: 'Current ledger',
-        ),
-      ],
     );
+    final card2 = SizedBox(
+      height: 110,
+      child: _buildStatCard(
+        context,
+        icon: LucideIcons.listTodo,
+        iconColor: AppColors.secondary,
+        title: 'Pending Tasks',
+        value: pendingTasks.toString(),
+        subtitle: 'Active priorities',
+      ),
+    );
+    final card3 = SizedBox(
+      height: 110,
+      child: _buildStatCard(
+        context,
+        icon: LucideIcons.folderOpen,
+        iconColor: AppColors.accent,
+        title: 'Active Projects',
+        value: activeProjects.toString(),
+        subtitle: 'Milestones tracked',
+      ),
+    );
+    final card4 = SizedBox(
+      height: 110,
+      child: _buildStatCard(
+        context,
+        icon: LucideIcons.award,
+        iconColor: AppColors.warning,
+        title: 'Monthly Expenses',
+        value: '\$${finance.monthlyExpenses.toStringAsFixed(0)}',
+        subtitle: 'Current ledger',
+      ),
+    );
+
+    if (isDesktop) {
+      return Row(
+        children: [
+          Expanded(child: card1),
+          const SizedBox(width: 16),
+          Expanded(child: card2),
+          const SizedBox(width: 16),
+          Expanded(child: card3),
+          const SizedBox(width: 16),
+          Expanded(child: card4),
+        ],
+      );
+    } else if (isTablet) {
+      return Column(
+        children: [
+          Row(
+            children: [
+              Expanded(child: card1),
+              const SizedBox(width: 16),
+              Expanded(child: card2),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: card3),
+              const SizedBox(width: 16),
+              Expanded(child: card4),
+            ],
+          ),
+        ],
+      );
+    } else {
+      return Column(
+        children: [
+          card1,
+          const SizedBox(height: 16),
+          card2,
+          const SizedBox(height: 16),
+          card3,
+          const SizedBox(height: 16),
+          card4,
+        ],
+      );
+    }
   }
 
   Widget _buildStatCard(
@@ -382,6 +437,7 @@ class DashboardScreen extends ConsumerWidget {
               return Column(
                 children: pending.map((task) {
                   return Padding(
+                    key: ValueKey(task.id),
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
@@ -448,6 +504,7 @@ class DashboardScreen extends ConsumerWidget {
               return Column(
                 children: active.map((proj) {
                   return Padding(
+                    key: ValueKey(proj.id),
                     padding: const EdgeInsets.only(bottom: 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

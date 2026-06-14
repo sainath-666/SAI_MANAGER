@@ -20,7 +20,6 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
   }
 
   Future<void> addProject(ProjectModel project) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(projectRepositoryProvider).createProject(project);
       return ref.read(projectRepositoryProvider).getProjects();
@@ -28,7 +27,6 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
   }
 
   Future<void> updateProject(ProjectModel project) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(projectRepositoryProvider).updateProject(project);
       return ref.read(projectRepositoryProvider).getProjects();
@@ -36,7 +34,6 @@ class ProjectsNotifier extends AsyncNotifier<List<ProjectModel>> {
   }
 
   Future<void> deleteProject(String id) async {
-    state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(projectRepositoryProvider).deleteProject(id);
       return ref.read(projectRepositoryProvider).getProjects();
